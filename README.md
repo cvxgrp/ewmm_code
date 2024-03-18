@@ -5,7 +5,7 @@ This repo accompanies our [paper](XXX) and provides code and data to replicate a
 Simply clone the repo
 
 ## Running the code
-To recreate the examples, simply open and run ```experiments.ipynb'''
+To recreate the examples, simply open and run ```experiments.ipynb```
 This will generate all figures.
 
 ## Citing
