@@ -12,11 +12,11 @@ This will generate all figures.
 If you want to reference our paper in your research, please consider citing us by using the following BibTeX:
 
 ```BibTeX
-@misc{luxenberg2022robustbond,
-  author = {Luxenberg, Eric and Schiele, Philipp and Boyd, Stephen},
-  doi = {10.48550/ARXIV.2212.02570},
-  title = {Robust Bond Portfolio Construction via Convex-Concave Saddle Point Optimization},
-  url = {https://arxiv.org/abs/2212.02570},
-  year = {2022}
+@misc{luxenberg2024ewmm,
+  author = {Luxenberg, Eric and Boyd, Stephen},
+  doi = {XXX},
+  title = {Exponentially Weighted Moving Models},
+  url = {XXX},
+  year = {2024}
 }
 ```
