@@ -4,7 +4,6 @@ import numpy as np
 import scipy as sp
 import cvxpy as cp
 from abc import ABC, abstractmethod
-from sklearn.linear_model import LogisticRegression
 from tqdm import tqdm
 import multiprocessing as mp
 
@@ -186,15 +185,56 @@ class Logistic_tail(Model):
         return preds, times, thetas
                 
 class QuantileEstimator(Model):
-    def __init__(self, alpha, gamma, name='QuantileEstimator', tail_approx: None | int = None):
+    def __init__(self, alpha, gamma, name='QuantileEstimator', tail_approx: None | int = None, grad=False):
         """
         Initialize the quantile estimator model with tail approximation
         """
-        self.name = f"alpha={alpha}" + ("" if tail_approx is None else "_tail_approx")
+        self.name = f"alpha={alpha}" + ("" if tail_approx is None else "_tail_approx") + ("" if not grad else "_grad")
         self.alpha = alpha
         self.gamma = gamma
         self.tail_approx = tail_approx
         self.plot_data = []
+        self.fit_prob = None
+        self.grad = grad
+
+
+    def poly_fit(self, X, Y, G):
+        # fit a quadratic based on the sampled points X and function values
+        # Y and gradients G
+
+        m = X.shape[0]
+
+        if self.fit_prob is None:
+            self.a = cp.Variable(nonneg=True, name="a")
+            self.b = cp.Variable(name="b")
+            self.c = cp.Variable(name="c")
+            self.Xpsquare = cp.Parameter(shape=(m,), name="Xsquare")
+            self.Xp = cp.Parameter(shape=(m,), name="X")
+            self.Yp = cp.Parameter(shape=(m,), name="Y")
+            self.Gp = cp.Parameter(shape=(m,), name="G")
+        
+            y_hat = cp.multiply(self.a, self.Xpsquare) + cp.multiply(self.b, self.Xp) + self.c
+            g_hat = cp.multiply(2 * self.a, self.Xp) + self.b
+
+            loss = cp.sum_squares(self.Yp - y_hat) + cp.sum_squares(self.Gp - g_hat)
+            self.fit_prob = cp.Problem(cp.Minimize(loss))
+
+        self.Xpsquare.value = X ** 2
+        self.Xp.value = X
+        self.Yp.value = Y
+        self.Gp.value = G
+
+        self.fit_prob.solve(solver=cp.MOSEK)
+
+        # z = np.linspace(X.min(), X.max(), 100)
+        # from matplotlib import pyplot as plt
+        # plt.scatter(X, Y)
+        # plt.plot(z, self.a.value * z ** 2 + self.b.value * z + self.c.value, label="fit_my")
+        # plt.legend()
+        # plt.show()
+
+        return float(self.a.value), float(self.b.value), float(self.c.value)
+
 
     def fit(self, y, prev, tail_approx, prob = None):
         """
@@ -228,25 +268,52 @@ class QuantileEstimator(Model):
                 tail_losses_np = np.maximum(0, x_tail - y_tail) * (1 - self.alpha) + np.maximum(0, y_tail - x_tail) * self.alpha
                 out = tail_losses_np @ weight_tail
                 return out
+            
+            def tail_loss_fn_grad(x):
+                """Compute the gradient of the tail loss function at x_tail"""
+                m = x.shape[0]
+                y_tail = y[-k*H:-H][None, :]
+                x_tail = x[:, None]
+                weight_tail = weight[-k*H:-H]
+
+                d = weight_tail.shape[0]
+
+                grad = np.zeros((m,d))
+                xgy = x_tail > y_tail
+                ygx = y_tail > x_tail
+
+                grad[xgy] = 1 - self.alpha
+                grad[ygx] = -self.alpha
+
+                return grad @ weight_tail
 
             def f(x):
                 theta.value = x
                 return tail_loss.value
             
             # sample m random points from a normal distribution around prev
-            m = 100
+            m = 10 #100
             np.random.seed(0)
             X = sp.stats.norm.rvs(prev, np.abs(prev)/5, size=m)
             Y = tail_loss_fn(X)
+            G = tail_loss_fn_grad(X)
 
-            # fit a quadratic to the points
-            # f(z) = a z^2 + b z + c
-            a,b,c = np.polyfit(X, Y, 2)
-            a = np.maximum(a, 1e-6)
+            if self.grad:
+                a, b, c = self.poly_fit(X, Y, G)
+            else:
+                a,b,c = np.polyfit(X, Y, 2)
+                a = np.maximum(a, 1e-6)
 
             if H_total in [100,200,300,400,500,600,700,800,900,998]:
                 z = np.linspace(X.min(), X.max(), 100)
                 self.plot_data.append((X,Y, z, a * z ** 2 + b * z + c, prev, f(prev)))
+
+                # from matplotlib import pyplot as plt
+                # plt.scatter(X, Y)
+                # plt.plot(z, a * z ** 2 + b * z + c, label="fit_my")
+                # plt.plot(z, a * z ** 2 + b * z + c, label="fit")
+                # plt.legend()
+                # plt.show()
 
             if prob is None:
                 A = cp.Parameter(nonneg=True, name="A")
