@@ -292,7 +292,7 @@ class QuantileEstimator(Model):
                 return tail_loss.value
             
             # sample m random points from a normal distribution around prev
-            m = 10 #100
+            m = 100
             np.random.seed(0)
             X = sp.stats.norm.rvs(prev, np.abs(prev)/5, size=m)
             Y = tail_loss_fn(X)
