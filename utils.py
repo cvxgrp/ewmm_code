@@ -292,7 +292,7 @@ class QuantileEstimator(Model):
                 return tail_loss.value
             
             # sample m random points from a normal distribution around prev
-            m = 100
+            m = 10
             np.random.seed(0)
             X = sp.stats.norm.rvs(prev, np.abs(prev)/5, size=m)
             Y = tail_loss_fn(X)
@@ -306,7 +306,9 @@ class QuantileEstimator(Model):
 
             if H_total in [100,200,300,400,500,600,700,800,900,998]:
                 z = np.linspace(X.min(), X.max(), 100)
-                self.plot_data.append((X,Y, z, a * z ** 2 + b * z + c, prev, f(prev)))
+                XX = np.linspace(X.min(), X.max(), 100)
+                YY = tail_loss_fn(XX)
+                self.plot_data.append((X,Y, z, a * z ** 2 + b * z + c, prev, f(prev), XX,YY))
 
                 # from matplotlib import pyplot as plt
                 # plt.scatter(X, Y)
