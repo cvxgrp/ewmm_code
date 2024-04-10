@@ -15,7 +15,7 @@ If you want to reference our paper in your research, please consider citing us b
 @misc{luxenberg2024ewmm,
   author = {Luxenberg, Eric and Boyd, Stephen},
   title = {Exponentially Weighted Moving Models},
-  url = {[XXX](https://web.stanford.edu/~boyd/papers/pdf/ewmm.pdf)},
+  url = {https://web.stanford.edu/~boyd/papers/pdf/ewmm.pdf},
   year = {2024}
 }
 ```
